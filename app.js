@@ -144,7 +144,7 @@ app.post('/insure/:address/', function (req, res) {
   web3.personal.unlockAccount(account, req.body.password, 2, function(err, result) {
     if(result) {
       policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region, 
-        {value: policyMonthlyPayment, gas: 300000, gasPrice: 9000000000, from: account}, 
+        {value: policyMonthlyPayment, gas: 300000, gasPrice: 30000000000, from: account}, 
        function(err, result) {
         if(err) {
           console.log(err);
@@ -166,7 +166,7 @@ app.post('/insure/:address/', function (req, res) {
 
                     web3.personal.unlockAccount(adminAccount, adminPass, 2, function(err, result) {
                       if(result) {    
-                        policyContract.confirmPolicy(account, {gas: 200000, from: adminAccount}, function(err, result) {
+                        policyContract.confirmPolicy(account, {gas: 200000, gasPrice: 15000000000, from: adminAccount}, function(err, result) {
                           if(err) {
                             console.log('' + err);
                             // res.status(400);
