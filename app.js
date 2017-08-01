@@ -144,7 +144,7 @@ app.post('/insure/:address/', function (req, res) {
   web3.personal.unlockAccount(account, req.body.password, 2, function(err, result) {
     if(result) {
       policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region, 
-        {value: policyMonthlyPayment, gas: 300000, from: account}, 
+        {value: policyMonthlyPayment, gas: 300000, gasPrice: 9000000000, from: account}, 
        function(err, result) {
         if(err) {
           console.log(err);
@@ -157,7 +157,7 @@ app.post('/insure/:address/', function (req, res) {
           filter.watch(function(error, result) {
             console.log(error);
             if (!error) {
-              let confirmedBlock = web3.eth.getBlock(web3.eth.blockNumber - 1)
+              let confirmedBlock = web3.eth.getBlock(web3.eth.blockNumber - 3)
               if (confirmedBlock.transactions.length > 0) {
                   let transaction = web3.eth.getTransaction(txIdinsure);
                   if (transaction && transaction.from == account) {
