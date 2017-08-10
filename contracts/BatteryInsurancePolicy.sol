@@ -169,7 +169,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
 
     insurancePolicies[msg.sender] = policy;
     totalInsurers = totalInsurers + 1;
-    lastPolicyDate = policy.endDateTimestamp;
+    lastPolicyDate = uint32(policy.endDateTimestamp);
 
     Insured(deviceBrand, msg.value);
     return true;
@@ -281,7 +281,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
         int totalFreeBalance = insurePackageBalance + int(totalInvestedAmount);
         if (insurePackageBalance > 0)
         {           
-            uint investorPart = uint(insurePackageBalance).mul(uint(10)**decimalPrecision).mul(investorProportion).div(uint(100).mul(uint(10)**decimalPrecision));
+            uint investorPart = uint(totalFreeBalance).mul(uint(10)**decimalPrecision).mul(investorProportion).div(uint(100).mul(uint(10)**decimalPrecision));
             
             return investorPart.mul(uint(10)**decimalPrecision);
         }            
@@ -290,7 +290,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
       else
       { 
         uint investedAmount = investors[msg.sender];
-        uint8 dividendsLines = payedDividends[msg.sender].length;
+        var dividendsLines = payedDividends[msg.sender].length;
       
         uint availableDividend = investedAmount.div(100);
         //return 1 percent of investition on first time
@@ -302,8 +302,8 @@ contract BatteryInsurancePolicy is PolicyInvestable {
         {
           var lastDividendDate = payedDividends[msg.sender][dividendsLines-1].transferDate;
 
-          uint32 dateDiff = now.sub(lastDividendDate);
-          uint32 allowedDifference = 5 * 24 * 60 * 60; // allow dividends each 5 dates;
+          var dateDiff = now.sub(lastDividendDate);
+          uint24 allowedDifference = 5 * 24 * 60 * 60; // allow dividends each 5 dates;
 
           if(dateDiff > allowedDifference)
           {
