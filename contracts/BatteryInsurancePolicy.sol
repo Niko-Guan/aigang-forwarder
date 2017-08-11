@@ -1,5 +1,5 @@
 pragma solidity ^0.4.14;
-//test2
+
 import "./PolicyInvestable.sol";
 import "./SafeMath.sol";
 
