@@ -16,7 +16,6 @@ contract BatteryInsurancePolicy is PolicyInvestable {
   
   uint128 public investmentsLimit;
   uint32 public investmentsDeadlineTimeStamp;
-  uint32 public lastPolicyDate;
   
   uint8 constant decimalPrecision = 8;
     
@@ -32,6 +31,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
   uint public maxPayout;
   uint loading;
   uint public writtenPremiumAmount;
+   uint32 public lastPolicyDate;
 
 
   // Owner is used to confirm policies and claims which came via our server
@@ -186,12 +186,12 @@ contract BatteryInsurancePolicy is PolicyInvestable {
 
     if(wearLevel < 70 && userPolicy.endDateTimestamp != 0 && !userPolicy.claimed && userPolicy.endDateTimestamp > now && userPolicy.confirmed) {
       if(this.balance > userPolicy.maxPayout) {
-        msg.sender.transfer(userPolicy.maxPayout);
         userPolicy.claimed = true;
         userPolicy.endDateTimestamp = now;
         userPolicy.nextPaymentTimestamp = 0;
 
         totalClaimsPaid = totalClaimsPaid + userPolicy.maxPayout;
+        msg.sender.transfer(userPolicy.maxPayout);
         Claimed(userPolicy.maxPayout);
         return true;
       }
@@ -245,6 +245,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
 
       payedDividends[msg.sender].push(dividendLine);
       payedDividendsAmount += dividends;
+      msg.sender.transfer(dividends);
       DividendsPayed(dividends);
     }   
   }
@@ -268,11 +269,11 @@ contract BatteryInsurancePolicy is PolicyInvestable {
   }
 
   // return weis
-  function calculateDividends() private returns (uint) {
+  function calculateDividends() private constant returns (uint) {
      // check user invested
     uint investorProportion = getInvestorProportion();
     
-    if (investorProportion > 0)
+    if (investorProportion > 0 && totalInsurers > 0)
     {  
       int insurePackageBalance = getFreeBalance();     
       //if all policies ended
@@ -315,5 +316,4 @@ contract BatteryInsurancePolicy is PolicyInvestable {
     
     return 0;    
   }
-
 }
