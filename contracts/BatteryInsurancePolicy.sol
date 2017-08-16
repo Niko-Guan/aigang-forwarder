@@ -1,7 +1,40 @@
 pragma solidity ^0.4.14;
 
-import "./PolicyInvestable.sol";
-import "./SafeMath.sol";
+//import "./PolicyInvestable.sol";
+contract PolicyInvestable {
+  function invest() payable returns (bool success);
+
+  event Invested(uint value);
+}
+
+
+//import "./SafeMath.sol";
+
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
 
 contract BatteryInsurancePolicy is PolicyInvestable { 
 
@@ -17,7 +50,8 @@ contract BatteryInsurancePolicy is PolicyInvestable {
   uint128 public investmentsLimit;
   uint32 public investmentsDeadlineTimeStamp;
   
-  uint8 constant decimalPrecision = 8;
+  uint8 constant DECIMAL_PRECISION = 8;
+  uint24 constant ALLOWED_RETURN_INTERVAL_SEC = 15 * 60; // 15 minutes
     
   mapping (address => DividendLine[]) private payedDividends;
   uint public payedDividendsAmount;
@@ -35,12 +69,12 @@ contract BatteryInsurancePolicy is PolicyInvestable {
 
 
   // Owner is used to confirm policies and claims which came via our server
-  address owner = 0xca35b7d915458ef540ade6068dfe2f44e8fa733c;
+  address owner = 0x2033d81c062dE642976300c6eabCbA149e4372BE;
 
 
   event Insured(string deviceName, uint insurancePrice);
   event Claimed(uint payout); 
-  event DividendsPayed(uint payout); 
+  event DividendsPayed(uint date, uint payout); 
 
   struct DividendLine{
       uint amount;
@@ -109,8 +143,8 @@ contract BatteryInsurancePolicy is PolicyInvestable {
     maxPayout = 10000000000000000;
     
     investmentsLimit = 1000000000000000000000; //1000 ETH
-    investmentsDeadlineTimeStamp = uint32(now) + 60 days;
-
+    investmentsDeadlineTimeStamp = uint32(now) + 90 days;
+    lastPolicyDate = uint32(now) + 90 days;
     policiesLimit = 10000;
 
     // Loading percentage (expenses, etc)
@@ -122,7 +156,6 @@ contract BatteryInsurancePolicy is PolicyInvestable {
     throw;
   }
 
-  
 
   // policy part
   // More parameters should be included
@@ -218,6 +251,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
  //investor Part
   function invest() payable returns (bool success) {
       require(msg.value > 0);
+      require(isInvestmentPeriodEnded() == false);
   
       investors[msg.sender] = investors[msg.sender] + msg.value;
       totalInvestorsCount++;
@@ -236,78 +270,69 @@ contract BatteryInsurancePolicy is PolicyInvestable {
     return dividends;
   }
 
-  function transferDividends() returns (bool){
+  function transferDividends() payable returns (bool){
     uint dividends = checkAvailableDividends();
 
-    if(dividends > 0)
+    if (dividends > 0)
     {
       var dividendLine = DividendLine(dividends, uint32(now));
 
       payedDividends[msg.sender].push(dividendLine);
       payedDividendsAmount += dividends;
       msg.sender.transfer(dividends);
-      DividendsPayed(dividends);
+      DividendsPayed(now, dividends);
+      return true;
     }   
   }
 
-  function getFreeBalance() private constant returns (int) {
+  function getFreeBalance() returns (int) {
     return int(writtenPremiumAmount - totalClaimsPaid);
   }
 
- 
- function getInvestorProportion() private constant returns (uint) {
-    //temproray fast calculations TODO: use model calculations
-    uint investedAmount = investors[msg.sender];
-    
-    if (investedAmount > 0) 
-    {
-      uint proportion = investedAmount.mul(100).mul(uint(10)**decimalPrecision).div(totalInvestedAmount); 
-      return proportion;
-    }
-    
-    return 0;
+  function getInvestorProportion() returns (uint) {
+      //temproray fast calculations TODO: use model calculations
+      uint investedAmount = investors[msg.sender];
+      
+      if (investedAmount > 0) 
+      {
+        uint proportion = investedAmount.mul(100).mul(uint(10)**DECIMAL_PRECISION).div(totalInvestedAmount); 
+        return proportion;
+      }
+      
+      return 0;
   }
 
   // return weis
-  function calculateDividends() private constant returns (uint) {
+  function calculateDividends() returns (uint) {
      // check user invested
     uint investorProportion = getInvestorProportion();
     
-    if (investorProportion > 0 && totalInsurers > 0)
-    {  
+    if (investorProportion > 0) {//&& totalInsurers > 0  
       int insurePackageBalance = getFreeBalance();     
+     
       //if all policies ended
-      if(now > lastPolicyDate)
-      {     
+      if (now > lastPolicyDate) {     
         int totalFreeBalance = insurePackageBalance + int(totalInvestedAmount);
-        if (insurePackageBalance > 0)
-        {           
-            uint investorPart = uint(totalFreeBalance).mul(uint(10)**decimalPrecision).mul(investorProportion).div(uint(100).mul(uint(10)**decimalPrecision));
+        if (insurePackageBalance > 0) {
+            uint investorPart = uint(totalFreeBalance).mul(uint(10)**DECIMAL_PRECISION).mul(investorProportion).div(uint(100).mul(uint(10)**DECIMAL_PRECISION));
             
-            return investorPart.mul(uint(10)**decimalPrecision);
+            return investorPart.mul(uint(10)**DECIMAL_PRECISION);
         }            
-      }
-      //policies are not ended. Return only 0.01 part from user investment as an example;
-      else
-      { 
+      } else {  //policies are not ended. Return only 0.01 part from user investment as an example;
+        
         uint investedAmount = investors[msg.sender];
-        var dividendsLines = payedDividends[msg.sender].length;
-      
+        var dividendsLines = payedDividends[msg.sender].length;      
         uint availableDividend = investedAmount.div(100);
+        
         //return 1 percent of investition on first time
-        if(dividendsLines == 0)
-        {
+        if (dividendsLines == 0){
           return availableDividend; 
-        } 
-        else
-        {
+        } else {
           var lastDividendDate = payedDividends[msg.sender][dividendsLines-1].transferDate;
 
           var dateDiff = now.sub(lastDividendDate);
-          uint24 allowedDifference = 5 * 24 * 60 * 60; // allow dividends each 5 dates;
 
-          if(dateDiff > allowedDifference)
-          {
+          if (dateDiff > ALLOWED_RETURN_INTERVAL_SEC){
             return availableDividend;
           } 
         }        
