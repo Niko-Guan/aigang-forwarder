@@ -264,13 +264,15 @@ contract BatteryInsurancePolicy is PolicyInvestable {
     return (investmentsDeadlineTimeStamp < now);
   }
 
+
+  //dividend
   function checkAvailableDividends() constant returns (uint) {       
     uint dividends = calculateDividends();
 
     return dividends;
   }
 
-  function transferDividends() payable returns (bool){
+  function transferDividends() returns (bool) {
     uint dividends = checkAvailableDividends();
 
     if (dividends > 0)
@@ -285,11 +287,23 @@ contract BatteryInsurancePolicy is PolicyInvestable {
     }   
   }
 
-  function getFreeBalance() returns (int) {
+  function getFreeBalance() private returns (int) {
     return int(writtenPremiumAmount - totalClaimsPaid);
   }
 
-  function getInvestorProportion() returns (uint) {
+   function getdiMyDividendsAmount() constant returns (uint) {
+        uint result = 0;
+        
+        var eventsCount = payedDividends[msg.sender].length;
+        
+        for (uint i = 0; i < eventsCount; i++){
+            result += payedDividends[msg.sender][i].amount;
+        }
+           
+        return result;
+    }
+
+  function getInvestorProportion() private returns (uint) {
       //temproray fast calculations TODO: use model calculations
       uint investedAmount = investors[msg.sender];
       
@@ -303,7 +317,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
   }
 
   // return weis
-  function calculateDividends() returns (uint) {
+  function calculateDividends() constant returns (uint) {
      // check user invested
     uint investorProportion = getInvestorProportion();
     
