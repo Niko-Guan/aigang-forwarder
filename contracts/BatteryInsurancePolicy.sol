@@ -51,7 +51,7 @@ contract BatteryInsurancePolicy is PolicyInvestable {
   uint32 public investmentsDeadlineTimeStamp;
   
   uint8 constant DECIMAL_PRECISION = 8;
-  uint24 constant ALLOWED_RETURN_INTERVAL_SEC = 15 * 60; // 15 minutes
+  uint24 constant ALLOWED_RETURN_INTERVAL_SEC = 24 * 60 * 60; // each 24 hours
     
   mapping (address => DividendLine[]) private payedDividends;
   uint public payedDividendsAmount;
