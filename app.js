@@ -22,7 +22,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:8545"));
 var obj = JSON.parse(fs.readFileSync('./build/contracts/BatteryInsurancePolicy.json', 'utf8'));
 var abiArray = obj.abi;
 // Insurance policy contract address Ropsten testnet
-var contractAddress = '0x554ab5f5fe7006223c2dd321b420e9a05d48ec93';
+var contractAddress = '0xbccc714d56bc0da0fd33d96d2a87b680dd6d0df6';
 var policyContract = web3.eth.contract(abiArray).at(contractAddress);
 var adminAccount = '0x2033d81c062de642976300c6eabcba149e4372be';
 var adminPass = '';
@@ -141,25 +141,32 @@ app.post('/insure/:address/', function (req, res) {
   var region = req.body.region;
   var policyMonthlyPayment = Math.round(policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region) / 12);
   console.log(itemId + '' + deviceBrand+ '' + deviceYear+ '' +region + '' + policyMonthlyPayment);
+  
   web3.personal.unlockAccount(account, req.body.password, 2, function(err, result) {
     if(result) {
+      
       policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region, 
         {value: policyMonthlyPayment, gas: 300000, gasPrice: 30000000000, from: account}, 
-       function(err, result) {
+       
+        function(err, result) {
+        
         if(err) {
           console.log(err);
           res.status(400);
           res.send('1' + err);
         } else {
+          
           var txIdinsure = result;
           res.send(txIdinsure);
+         
           let filter = web3.eth.filter('latest')
           filter.watch(function(error, result) {
             console.log(error);
             if (!error) {
               let confirmedBlock = web3.eth.getBlock(web3.eth.blockNumber - 3)
               if (confirmedBlock.transactions.length > 0) {
-                  let transaction = web3.eth.getTransaction(txIdinsure);
+             
+                let transaction = web3.eth.getTransaction(txIdinsure);
                   if (transaction && transaction.from == account) {
 
                     //---- confirmation transaction is needed from OWNER , TODO: refactor it and move to other file
