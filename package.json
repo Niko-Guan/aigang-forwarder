@@ -13,6 +13,11 @@
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "helmet": "^3.6.1",
-    "solc": "^0.4.10-1"
+    "solc": "^0.4.10-1",
+    "web3": "^0.20.1"
+  },
+  "noAnalyze": true,
+  "engines": {
+    "node": "~8.4.0"
   }
 }

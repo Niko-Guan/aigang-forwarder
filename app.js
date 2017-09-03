@@ -2,22 +2,17 @@
 
 const Web3 = require('web3')
 const express = require('express')
-const https = require('https');
+//const https = require('https');
 const fs = require('fs');
 const app = express()
 
 var bodyParser = require('body-parser');
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded b
-app.use(require('helmet')()); // security for https
+//app.use(require('helmet')()); // security for https
 
-// Set up express server here
-const options = {
-    cert: fs.readFileSync('../../../../etc/letsencrypt/live/api.aigang.network/fullchain.pem'),
-    key: fs.readFileSync('../../../../etc/letsencrypt/live/api.aigang.network/privkey.pem')
-};
 
-const web3 = new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:8545"));
+const web3 = new Web3(new Web3.providers.HttpProvider("http://40.68.123.7:8545"));
 
 var obj = JSON.parse(fs.readFileSync('./build/contracts/BatteryInsurancePolicy.json', 'utf8'));
 var abiArray = obj.abi;
@@ -27,6 +22,18 @@ var policyContract = web3.eth.contract(abiArray).at(contractAddress);
 var adminAccount = '0x2033d81c062de642976300c6eabcba149e4372be';
 var adminPass = '';
 var apiKey = '';
+
+app.get('/time', function (req, res) {
+  var currentDate = new Date();
+  var result = {
+    now: currentDate.toISOString(),
+    tamezoneOffset: currentDate.getTimezoneOffset()
+  }
+
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(result));
+})
+
 
 app.get('/balance/:address', function (req, res) {
   var balance = web3.eth.getBalance(req.params.address).toNumber()
@@ -266,9 +273,9 @@ app.get('/', function (req, res) {
   res.send('Welcome to API. Specs can be found: ');
 })
 
-var server = https.createServer(options, app);
 
-server.listen(3000, function () {
-  console.log('Example app listening on port 3000 and https!')
+//var server = https.createServer(app);
+app.listen(process.env.PORT || 3000, function () {// 
+  console.log('Example app listening on port 3000 and https or process.env.PORT: ' + process.env.PORT);
 })
 
