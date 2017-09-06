@@ -6,3 +6,12 @@ Middle layer is used for iOS app to communicate with Ethereum blockchain. In the
 To install:
 npm install -g truffle
 npm install
+
+To build site:  
+ gulp buildsite
+
+In Production:  
+
+ npm install --production
+
+ NODE_ENV=production node server.js

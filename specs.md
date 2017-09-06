@@ -10,6 +10,8 @@ Request body example:
 {
 	"password": "0a2i84a...", // password hash
 	"apiKey": "1a1" // api key
+  "email": "a@a.com" //user email
+  "referralEmail": "b@b.com" // user email who invited
 }
 ```
 Response example:

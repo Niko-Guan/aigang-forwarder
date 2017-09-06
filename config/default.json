@@ -1,0 +1,30 @@
+{
+  "App": {
+    "apiKey": "test"
+  },
+  "MySql": {
+    "dbConfig": {
+      "host": "localhost", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "user": "test",            // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "password": "test",                     // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "database": "dbo",
+      "port": 3306,
+      "ssl": true
+    }
+  },
+  "Branch": {
+    "uri": "https://api.branch.io/v1/credits",
+    "branchKey": "test",      // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    "branchSecret": "test"    // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  },
+  "Web3": {
+    "Provider": {
+      "uri" : "http://localhost:8545",    // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "adminPass": "test",        // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "adminAccount": "0x2"
+    }, 
+    "Contracts": {
+      "batteryV2": "0x554ab5f5fe7006223c2dd321b420e9a05d48ec93"      
+    }  
+  }
+}

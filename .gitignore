@@ -1,1 +1,8 @@
+bin
+.vscode
 node_modules
+WinstonLog*
+web.config
+production.json
+iisnode.yml
+buildsite
