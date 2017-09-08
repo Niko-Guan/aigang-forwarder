@@ -16,9 +16,13 @@ app.use(helmet())
 app.use(bodyParser.json()) // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })) // support encoded b
 
-const web3 = new Web3(new Web3.providers.HttpProvider(config.get('Web3.Provider.uri')))
+const web3 = new Web3(
+  new Web3.providers.HttpProvider(config.get('Web3.Provider.uri'))
+)
 
-var obj = JSON.parse(fs.readFileSync('./build/contracts/BatteryInsurancePolicy.json', 'utf8'))
+var obj = JSON.parse(
+  fs.readFileSync('./build/contracts/BatteryInsurancePolicy.json', 'utf8')
+)
 var abiArray = obj.abi
 
 var contractAddress = config.get('Web3.Contracts.batteryV2')
@@ -65,22 +69,33 @@ app.post('/sendTestnetEthers/:address', function (req, res) {
     return
   }
 
-  web3.personal.unlockAccount(account, req.body.password, 4, function (err, accResult) {
+  web3.personal.unlockAccount(account, req.body.password, 4, function (
+    err,
+    accResult
+  ) {
     if (accResult) {
-    // unlocking admin account for ethers sending
-      web3.personal.unlockAccount(adminAccount, adminPass, 4, function (err, adminAccResult) {
-        web3.eth.sendTransaction({ value: 50000000000000000,
-          gas: 2000000,
-          from: adminAccount,
-          to: account }, function (err, result) {
-          if (err) {
-            logger.error(err)
-            res.send(false)
-          } else {
-            var txId = result
-            res.send('' + txId)
+      // unlocking admin account for ethers sending
+      web3.personal.unlockAccount(adminAccount, adminPass, 4, function (
+        err,
+        adminAccResult
+      ) {
+        web3.eth.sendTransaction(
+          {
+            value: 50000000000000000,
+            gas: 2000000,
+            from: adminAccount,
+            to: account
+          },
+          function (err, result) {
+            if (err) {
+              logger.error(err)
+              res.send(false)
+            } else {
+              var txId = result
+              res.send('' + txId)
+            }
           }
-        })
+        )
       })
     } else {
       logger.error(err)
@@ -103,24 +118,40 @@ app.post('/register', async function (req, res) {
 
   let account = await userRepository.getUserAccountAddress(email)
 
-  if (account) {
-    res.send(account)
-  } else {
-    try {
-      let account = await web3.personal.newAccount(req.body.password)
-      await userRepository.saveAccount(account, email, req.body.password, req.body.referralEmail)
+  try {
+    if (account) {
+      if (account === 'empty') {
+        account = await web3.personal.newAccount(req.body.password)
+        await userRepository.updateAccount(
+          account,
+          email
+        )
+        res.send(account)
+      } else {
+        res.send(account)
+      }
+    } else {
+      account = await web3.personal.newAccount(req.body.password)
+      await userRepository.saveAccount(
+        account,
+        email,
+        req.body.password,
+        req.body.referralEmail
+      )
 
       if (req.body.referralEmail) {
         let credit = await branchClient.giveCredit(req.body.referralEmail)
-        logger.info('Credit result: ' + credit + ' for email: ' + req.body.referralEmail)
+        logger.info(
+          'Credit result: ' + credit + ' for email: ' + req.body.referralEmail
+        )
       }
 
       res.send(account)
-    } catch (error) {
-      logger.error(error)
-      res.status(500)
-      res.send('' + error)
     }
+  } catch (error) {
+    logger.error(error)
+    res.status(500)
+    res.send('' + error)
   }
 })
 
@@ -131,7 +162,12 @@ app.post('/insurancePrice/:address', function (req, res) {
   var wearLevel = req.body.wearLevel
   var region = req.body.region
 
-  var result = policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region)
+  var result = policyContract.policyPrice(
+    deviceBrand,
+    deviceYear,
+    wearLevel,
+    region
+  )
   var priceInEth = result / 1000000000000000000
   res.send('' + priceInEth)
 })
@@ -159,14 +195,38 @@ app.post('/insure/:address/', function (req, res) {
   var deviceYear = req.body.deviceYear
   var wearLevel = req.body.wearLevel
   var region = req.body.region
-  var policyMonthlyPayment = Math.round(policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region) / 12)
-  logger.info(itemId + '' + deviceBrand + '' + deviceYear + '' + region + '' + policyMonthlyPayment)
+  var policyMonthlyPayment = Math.round(
+    policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region) / 12
+  )
+  logger.info(
+    itemId +
+      '' +
+      deviceBrand +
+      '' +
+      deviceYear +
+      '' +
+      region +
+      '' +
+      policyMonthlyPayment
+  )
 
-  web3.personal.unlockAccount(account, req.body.password, 2, function (err, result) {
+  web3.personal.unlockAccount(account, req.body.password, 2, function (
+    err,
+    result
+  ) {
     if (result) {
-      policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region,
-        { value: policyMonthlyPayment, gas: 300000, gasPrice: 30000000000, from: account },
-
+      policyContract.insure(
+        itemId,
+        deviceBrand,
+        deviceYear,
+        wearLevel,
+        region,
+        {
+          value: policyMonthlyPayment,
+          gas: 300000,
+          gasPrice: 30000000000,
+          from: account
+        },
         function (err, result) {
           if (err) {
             logger.error(err)
@@ -180,40 +240,56 @@ app.post('/insure/:address/', function (req, res) {
             filter.watch(function (error, result) {
               logger.error(error)
               if (!error) {
-                let confirmedBlock = web3.eth.getBlock(web3.eth.blockNumber - 3)
+                let confirmedBlock = web3.eth.getBlock(
+                  web3.eth.blockNumber - 3
+                )
                 if (confirmedBlock.transactions.length > 0) {
                   let transaction = web3.eth.getTransaction(txIdinsure)
                   if (transaction && transaction.from === account) {
                     // ---- confirmation transaction is needed from OWNER , TODO: refactor it and move to other file
 
-                  web3.personal.unlockAccount(adminAccount, adminPass, 2, function (err, result) {
-                    if (result) {
-                      policyContract.confirmPolicy(account, { gas: 200000, gasPrice: 15000000000, from: adminAccount }, function (err, result) {
-                          if (err) {
-                            logger.error('' + err)
-                            // res.status(400);
-                            // res.send('2' + err);
-                          } else {
-                            // res.send(txIdinsure);
-                            logger.info('success confirmation')
-                          }
-                        })
-                    } else {
-                      logger.error('' + err)
-                    }
-                  })
+                    web3.personal.unlockAccount(
+                      adminAccount,
+                      adminPass,
+                      2,
+                      function (err, result) {
+                        if (result) {
+                          policyContract.confirmPolicy(
+                            account,
+                            {
+                              gas: 200000,
+                              gasPrice: 15000000000,
+                              from: adminAccount
+                            },
+                            function (err, result) {
+                              if (err) {
+                                logger.error('' + err)
+                                // res.status(400);
+                                // res.send('2' + err);
+                              } else {
+                                // res.send(txIdinsure);
+                                logger.info('success confirmation')
+                              }
+                            }
+                          )
+                        } else {
+                          logger.error('' + err)
+                        }
+                      }
+                    )
 
                     // -------
-                } else {
-                  res.status(400)
-                  res.send('4' + error)
-                }
+                  } else {
+                    res.status(400)
+                    res.send('4' + error)
+                  }
                   filter.stopWatching()
                 }
               }
             })
           }
-        })
+        }
+      )
     } else {
       res.status(400)
       res.send('5' + err)
@@ -256,9 +332,15 @@ app.post('/claim/:address', function (req, res) {
   var account = req.params.address
   var wearLevel = req.body.wearLevel
 
-  web3.personal.unlockAccount(account, req.body.password, 2, function (err, result) {
+  web3.personal.unlockAccount(account, req.body.password, 2, function (
+    err,
+    result
+  ) {
     if (result) {
-      policyContract.claim(wearLevel, { gas: 300000, from: account }, function (err, result) {
+      policyContract.claim(wearLevel, { gas: 300000, from: account }, function (
+        err,
+        result
+      ) {
         if (err) {
           logger.error(err)
           res.status(400)
@@ -280,5 +362,8 @@ app.get('/', function (req, res) {
 })
 
 app.listen(process.env.PORT || 3000, function () {
-  logger.info('Example app listening on port 3000 and https or process.env.PORT: ' + process.env.PORT)
+  logger.info(
+    'Example app listening on port 3000 and https or process.env.PORT: ' +
+      process.env.PORT
+  )
 })
