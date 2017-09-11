@@ -4,5 +4,6 @@ module.exports = {
 
   userIsNotRegistered: 'USER_IS_NOT_REGISTERED',
   refferalAlreadyReceivedBonus: 'REFFERAL_ALREADY_RECEIVED_BONUS',
-  emailIsNotValid: 'EMAIL_IS_NOT_VALID'
+  emailIsNotValid: 'EMAIL_IS_NOT_VALID',
+  identityIsNotValid: 'BRANCH_IDENTITY_IS_NOT_VALID'
 }
