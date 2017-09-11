@@ -12,6 +12,7 @@
   "dependencies": {
     "body-parser": "^1.17.2",
     "config": "^1.26.2",
+    "email-existence": "^0.1.5",
     "express": "^4.15.3",
     "helmet": "^3.6.1",
     "mysql": "^2.14.1",

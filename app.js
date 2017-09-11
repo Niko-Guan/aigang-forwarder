@@ -7,6 +7,8 @@ const fs = require('fs')
 const app = express()
 const bodyParser = require('body-parser')
 const logger = require('./utils/logger.js')
+const errorCodes = require('./utils/errorCodes.js')
+const emailChecker = require('./utils/emailChecker.js')
 const userRepository = require('./repositories/userRepository.js')
 const branchClient = require('./clients/branchClient.js')
 const config = require('config')
@@ -15,6 +17,10 @@ const helmet = require('helmet')
 app.use(helmet())
 app.use(bodyParser.json()) // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })) // support encoded b
+app.use(function (req, res, next) {
+  res.setHeader('Content-Type', 'application/json')
+  next()
+})
 
 const web3 = new Web3(
   new Web3.providers.HttpProvider(config.get('Web3.Provider.uri'))
@@ -43,14 +49,14 @@ app.get('/time', function (req, res) {
   res.send(JSON.stringify(result))
 })
 
-// app.get('/test', async function (req, res) {
-//   let result
-//   // let result = await userRepository.getUserAccountAddress('a@a.lt')
-//   //result = await userRepository.saveAccount('0x6', 'ddetestemail', 'ddetestpsw', result)
-//   // let result = await branchClient.giveCredit('ps@g.com')
-//   //console.log('result ' + result)
-//   // return result
-// })
+app.get('/test', async function (req, res) {
+  //let result = await emailChecker.checkEmail('')
+  // let result = await userRepository.getUserAccountAddress('a@a.lt')
+  // result = await userRepository.saveAccount('0x6', 'ddetestemail', 'ddetestpsw', result)
+  // let result = await branchClient.giveCredit('ps@g.com')
+  // console.log('result ' + result)
+  // return result
+})
 
 app.get('/balance/:address', function (req, res) {
   var balance = web3.eth.getBalance(req.params.address).toNumber()
@@ -105,12 +111,20 @@ app.post('/sendTestnetEthers/:address', function (req, res) {
 })
 
 // referralEmail - user email who invited
-// register(apiKey, password, email, referralEmail)
+// register(apiKey, password, email)
 // todo refactor password
 app.post('/register', async function (req, res) {
   if (!req.body.password || !req.body.email || req.body.apiKey !== apiKey) {
     res.status(400)
-    res.send()
+    res.send(JSON.stringify({ 'errorCode' : 'INPUT_PARAMS_NOT_VALID' }))
+    return
+  }
+
+  let emailIsValid = await emailChecker.checkEmail(req.body.email)
+
+  if (!emailIsValid) {
+    res.status(400)
+    res.send(JSON.stringify({ errorCode :  errorCodes.emailIsNotValid }))
     return
   }
 
@@ -135,21 +149,62 @@ app.post('/register', async function (req, res) {
       await userRepository.saveAccount(
         account,
         email,
-        req.body.password,
-        req.body.referralEmail
+        req.body.password
       )
-
-      if (req.body.referralEmail) {
-        let credit = await branchClient.giveCredit(req.body.referralEmail)
-        logger.info(
-          'Credit result: ' + credit + ' for email: ' + req.body.referralEmail
-        )
-      }
 
       res.send(account)
     }
   } catch (error) {
     logger.error(error)
+    res.status(500)
+    res.send('' + error)
+  }
+})
+
+// checkReferral(apiKey, email, referralEmail)
+app.post('/checkReferral', async function (req, res) {
+  if (!req.body.referralEmail || !req.body.email || req.body.apiKey !== apiKey) {
+    res.status(400)
+    res.send(JSON.stringify({ errorCode :  errorCodes.inputParamsNotValid }))
+    return
+  }
+
+  try {
+    let referralEmail = req.body.referralEmail.toLowerCase()
+    let email = req.body.email.toLowerCase()
+
+    let emailIsValid = await emailChecker.checkEmail(email)
+    let refferalEmailIsValid = await emailChecker.checkEmail(referralEmail)
+
+    if (!emailIsValid || !refferalEmailIsValid) {
+      res.status(400)
+      res.send(JSON.stringify({ errorCode :  errorCodes.emailIsNotValid }))
+      return
+    }
+
+    let isUserRegistered = await userRepository.isUserRegistered(email)
+    if (!isUserRegistered) {
+      res.status(400)
+      res.send(JSON.stringify({ errorCode :  errorCodes.userIsNotRegistered }))
+      return
+    }
+
+    let isReferralSet = await userRepository.isReferralSet(email)
+    if (isReferralSet) {
+      res.status(400)
+      res.send(JSON.stringify({ errorCode :  errorCodes.refferalAlreadyReceivedBonus }))
+      return
+    }
+
+    await userRepository.updateReferral(email, referralEmail)
+    logger.info(`Referral Updated for ${email} referral: ${referralEmail}`)
+
+    let credit = await branchClient.giveCredit(req.body.referralEmail)
+    logger.info('Credit result: ' + credit + ' for email: ' + req.body.referralEmail)
+
+    res.send('OK')
+  } catch (error) {
+    logger.error(`checkReferral result: ${error} Stack: ${error.stack}`)
     res.status(500)
     res.send('' + error)
   }

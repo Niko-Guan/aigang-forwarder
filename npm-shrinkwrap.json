@@ -765,6 +765,11 @@
       "version": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz",
       "integrity": "sha1-WQxhFWsK4vTwJVcyoViyZrxWsh0="
     },
+    "email-existence": {
+      "version": "0.1.5",
+      "resolved": "https://registry.npmjs.org/email-existence/-/email-existence-0.1.5.tgz",
+      "integrity": "sha1-AwPbLoWEzAzV6MRukfR/w4QvUFs="
+    },
     "encodeurl": {
       "version": "https://registry.npmjs.org/encodeurl/-/encodeurl-1.0.1.tgz",
       "integrity": "sha1-eePVhlU0aQn+bw9Fpd5oEDspTSA="
