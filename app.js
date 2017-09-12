@@ -136,10 +136,7 @@ app.post('/register', async function (req, res) {
     if (account) {
       if (account === 'empty') {
         account = await web3.personal.newAccount(req.body.password)
-        await userRepository.updateAccount(
-          account,
-          email
-        )
+        await userRepository.updateAccount(account, email, req.body.password)
         res.send(account)
       } else {
         res.send(account)
