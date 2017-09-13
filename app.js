@@ -254,15 +254,12 @@ app.post('/insure/:address/', function (req, res) {
     policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region) / 12
   )
   logger.info(
-    itemId +
-      '' +
-      deviceBrand +
-      '' +
-      deviceYear +
-      '' +
-      region +
-      '' +
-      policyMonthlyPayment
+    'itemId: ' + itemId +
+    ' deviceBrand: ' + deviceBrand +
+    ' deviceYear: ' + deviceYear +
+    ' region: ' + region +
+    ' policyMonthlyPayment: ' + policyMonthlyPayment +
+    ' wearLevel: ' + wearLevel
   )
 
   web3.personal.unlockAccount(account, req.body.password, 2, function (
@@ -270,12 +267,7 @@ app.post('/insure/:address/', function (req, res) {
     result
   ) {
     if (result) {
-      policyContract.insure(
-        itemId,
-        deviceBrand,
-        deviceYear,
-        wearLevel,
-        region,
+      policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region,
         {
           value: policyMonthlyPayment,
           gas: 300000,
@@ -284,7 +276,7 @@ app.post('/insure/:address/', function (req, res) {
         },
         function (err, result) {
           if (err) {
-            logger.error(err)
+            logger.error('Error in insure ' + err +'object: '+ JSON.stringify(err))
             res.status(400)
             res.send('1' + err)
           } else {
@@ -292,8 +284,9 @@ app.post('/insure/:address/', function (req, res) {
             res.send(txIdinsure)
 
             let filter = web3.eth.filter('latest')
+
             filter.watch(function (error, result) {
-              logger.error(error)
+              logger.info('Any Error:' + error)
               if (!error) {
                 let confirmedBlock = web3.eth.getBlock(
                   web3.eth.blockNumber - 3
@@ -318,7 +311,7 @@ app.post('/insure/:address/', function (req, res) {
                             },
                             function (err, result) {
                               if (err) {
-                                logger.error('' + err)
+                                logger.error('confirmPolicy error:' + err)
                                 // res.status(400);
                                 // res.send('2' + err);
                               } else {
@@ -328,7 +321,7 @@ app.post('/insure/:address/', function (req, res) {
                             }
                           )
                         } else {
-                          logger.error('' + err)
+                          logger.error('unlockAccount error: ' + err)
                         }
                       }
                     )
@@ -346,6 +339,7 @@ app.post('/insure/:address/', function (req, res) {
         }
       )
     } else {
+      logger.error(`Error in unlock err: ${err} result: ${result} Error Details: ${JSON.stringify(err)} return 5err`)
       res.status(400)
       res.send('5' + err)
     }
@@ -397,7 +391,7 @@ app.post('/claim/:address', function (req, res) {
         result
       ) {
         if (err) {
-          logger.error(err)
+          logger.error('claim error: ' + err)
           res.status(400)
           res.send('' + false)
         } else {
@@ -406,6 +400,7 @@ app.post('/claim/:address', function (req, res) {
         }
       })
     } else {
+      logger.error('claim unlock empty result: ' + result)
       res.status(400)
       res.send('' + false)
     }
