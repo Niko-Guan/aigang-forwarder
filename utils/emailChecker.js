@@ -15,7 +15,7 @@ async function checkEmail (email) {
     if (response === true) {
       result = true
     } else {
-      logger.info(`emailChecker email ${email} is not valid`)
+      logger.info(`emailChecker email ${email} is not valid. Response: ${response}`)
     }
   } catch (error) {
     logger.error('emailChecker error: ' + error + ' Stack: ' + error.stack)

@@ -50,12 +50,12 @@ app.get('/time', function (req, res) {
 })
 
 app.get('/test', async function (req, res) {
-  //let result = await emailChecker.checkEmail('')
+  // let result = await emailChecker.checkEmail('')
   // let result = await userRepository.getUserAccountAddress('a@a.lt')
   // result = await userRepository.saveAccount('0x6', 'ddetestemail', 'ddetestpsw', result)
-  // let result = await branchClient.giveCredit('ps@g.com')
+ // let result = await branchClient.getBranchIdentity('')
   // console.log('result ' + result)
-  // return result
+  //return result
 })
 
 app.get('/balance/:address', function (req, res) {
@@ -116,7 +116,7 @@ app.post('/sendTestnetEthers/:address', function (req, res) {
 app.post('/register', async function (req, res) {
   if (!req.body.password || !req.body.email || req.body.apiKey !== apiKey) {
     res.status(400)
-    res.send(JSON.stringify({ 'errorCode' : 'INPUT_PARAMS_NOT_VALID' }))
+    res.send(JSON.stringify({ errorCode :  errorCodes.inputParamsNotValid }))
     return
   }
 
@@ -136,10 +136,7 @@ app.post('/register', async function (req, res) {
     if (account) {
       if (account === 'empty') {
         account = await web3.personal.newAccount(req.body.password)
-        await userRepository.updateAccount(
-          account,
-          email
-        )
+        await userRepository.updateAccount(account, email, req.body.password)
         res.send(account)
       } else {
         res.send(account)
@@ -161,19 +158,28 @@ app.post('/register', async function (req, res) {
   }
 })
 
-// checkReferral(apiKey, email, referralEmail)
+// checkReferral(apiKey, email, referralIdentity)
 app.post('/checkReferral', async function (req, res) {
-  if (!req.body.referralEmail || !req.body.email || req.body.apiKey !== apiKey) {
+  if (!req.body.referralIdentity || !req.body.email || req.body.apiKey !== apiKey) {
     res.status(400)
     res.send(JSON.stringify({ errorCode :  errorCodes.inputParamsNotValid }))
     return
   }
 
   try {
-    let referralEmail = req.body.referralEmail.toLowerCase()
+    let branchIdentity = await branchClient.getBranchIdentity(req.body.referralIdentity)
+
+    if (!branchIdentity) {
+      res.status(400)
+      res.send(JSON.stringify({ errorCode :  errorCodes.identityIsNotValid }))
+      return
+    }
+
+    let referralEmail = branchIdentity.toLowerCase()
     let email = req.body.email.toLowerCase()
 
     let emailIsValid = await emailChecker.checkEmail(email)
+    
     let refferalEmailIsValid = await emailChecker.checkEmail(referralEmail)
 
     if (!emailIsValid || !refferalEmailIsValid) {
@@ -199,8 +205,8 @@ app.post('/checkReferral', async function (req, res) {
     await userRepository.updateReferral(email, referralEmail)
     logger.info(`Referral Updated for ${email} referral: ${referralEmail}`)
 
-    let credit = await branchClient.giveCredit(req.body.referralEmail)
-    logger.info('Credit result: ' + credit + ' for email: ' + req.body.referralEmail)
+    let credit = await branchClient.giveCredit(referralEmail)
+    logger.info('Credit result: ' + credit + ' for email: ' + referralEmail)
 
     res.send('OK')
   } catch (error) {

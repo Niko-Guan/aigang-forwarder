@@ -12,7 +12,7 @@ async function giveCredit (referralEmail) {
 
   let options = {
     method: 'POST',
-    uri: config.get('Branch.uri'),
+    uri: config.get('Branch.uri') + 'credits',
     resolveWithFullResponse: true,
     json: requestData
   }
@@ -26,11 +26,40 @@ async function giveCredit (referralEmail) {
       logger.warning('Refferals not added: ' + referralEmail + '\r\n Status: ' + response.statusCode + '\r\n Response: ' + JSON.stringify(response.body))
     }
   } catch (error) {
-    logger.Error('RefferalEmail: ' + referralEmail + '\r\n Error: ' + error.error)
+    logger.error('RefferalEmail: ' + referralEmail + '\r\n Error: ' + error.error)
     return false
   }
 }
 
+async function getBranchIdentity (branchIdentity){
+  let options = {
+    method: 'GET',
+    uri: config.get('Branch.uri') + 'profile',
+    qs: {
+      'branch_key': config.get('Branch.branchKey'),
+      'identity_id': branchIdentity
+    },
+    resolveWithFullResponse: true,
+    json: true
+  }
+
+  try {
+    let response = await request(options)
+    if (response.statusCode === 200) {
+      let email = response.body.identity
+      logger.info('User Email was found: ' + email)
+      return email
+    } else {
+      logger.warning('User Email was not found for ' + branchIdentity + '\r\n Status: ' + response.statusCode + '\r\n Response: ' + JSON.stringify(response.body))
+      return undefined
+    }
+  } catch (error) {
+    logger.error('BranchIdentity: ' + branchIdentity + '\r\n Error: ' + error.error)
+    return undefined
+  }
+}
+
 module.exports = {
-  giveCredit: giveCredit
+  giveCredit: giveCredit,
+  getBranchIdentity: getBranchIdentity
 }

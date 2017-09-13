@@ -13,7 +13,7 @@
     }
   },
   "Branch": {
-    "uri": "https://api.branch.io/v1/credits",
+    "uri": "https://api.branch.io/v1/",
     "branchKey": "test",      // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     "branchSecret": "test"    // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   },

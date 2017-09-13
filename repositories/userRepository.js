@@ -51,13 +51,13 @@ async function saveAccount (account, email, password) {
   }
 }
 
-async function updateAccount (account, email) {
+async function updateAccount (account, email, password) {
   try {
     const conn = await mysql.createConnection(dbConfig)
 
     const [results, err] = await conn.query(
-      'UPDATE dbo.users SET Account = ?, Modified = NOW() WHERE UserEmail = ?',
-      [account, email]
+      'UPDATE dbo.users SET Account = ?, Password = ?, Modified = NOW() WHERE UserEmail = ?',
+      [account, password, email]
     )
     return results
   } catch (error) {
