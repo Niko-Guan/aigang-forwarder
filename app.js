@@ -326,12 +326,7 @@ app.post("/insure/:address/", function(req, res) {
     }
 
     if (result) {
-      policyContract.insure(
-        itemId,
-        deviceBrand,
-        deviceYear,
-        wearLevel,
-        region,
+      policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region,
         {
           value: policyMonthlyPayment,
           gas: 300000,
