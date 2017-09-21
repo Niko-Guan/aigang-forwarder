@@ -1,42 +1,48 @@
 'use strict'
 
-var winston = require('winston')
-const winstonCommon = require('winston/lib/winston/common')
+var log4js = require('log4js')
+var logger = log4js.getLogger()
+var insureLogger = log4js.getLogger('insureLogger')
+var expressLogger = log4js.getLogger('expressLogger')
 
-winston.add(winston.transports.File, {
-  filename: 'WinstonLog.txt',
-  maxsize: '3000000', // 3 Mb rotation
-  json: false,
-  handleExceptions: true
+log4js.configure({
+  appenders: {
+    file: { type: 'file', filename: 'logs/logs.log', maxLogSize: 1000000, backups: 4, compress: false },
+    console: { type: 'console' },
+    insureLogger: { type: 'file', filename: 'logs/insure.log', maxLogSize: 500000, backups: 10, compress: false },
+    expressLogger: { type: 'file', filename: 'logs/express.log', maxLogSize: 500000, backups: 10, compress: false }
+  },
+  categories: {
+    default: { appenders: ['file', 'console'], level: 'debug' },
+    insureLogger: { appenders: ['insureLogger'], level: 'debug' },
+    expressLogger: { appenders: ['expressLogger'], level: 'debug' }
+  }
 })
 
-// oweride to work with VS Code https://github.com/Microsoft/vscode/issues/19750
-winston.transports.Console.prototype.log = function (level, message, meta, callback) {
-  const output = winstonCommon.log(Object.assign({}, this, {
-    level,
-    message,
-    meta
-  }))
-
-  console[level in console ? level : 'log'](output)
-
-  setImmediate(callback, null, true)
-}
-
 function info (message) {
-  winston.info(message)
+  logger.info(message)
 }
 
 function warning (message) {
-  winston.warn(message)
+  logger.warn(message)
 }
 
 function error (message) {
-  winston.error(message)
+  logger.error(message)
+}
+
+function infoInsure (message) {
+  insureLogger.info(message)
+}
+
+function connectLogger () {
+  return log4js.connectLogger(expressLogger, { level: 'auto' })
 }
 
 module.exports = {
   info: info,
   warning: warning,
-  error: error
+  error: error,
+  connectLogger: connectLogger,
+  infoInsure: infoInsure
 }

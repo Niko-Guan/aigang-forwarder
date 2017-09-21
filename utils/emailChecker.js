@@ -9,13 +9,22 @@ const checkAsync = promisify(emailExistence.check)
 
 async function checkEmail (email) {
   let result = false
+
   try {
     let response = await checkAsync(email)
 
     if (response === true) {
       result = true
+      logger.info(`emailChecker email ${email} is valid.`)
     } else {
-      logger.info(`emailChecker email ${email} is not valid. Response: ${response}`)
+      response = await checkAsync(email)
+
+      if (response === true) {
+        result = true
+        logger.info(`emailChecker email ${email} is valid in seccond try.`)
+      } else {
+        logger.warning(`emailChecker email ${email} is not valid. Response: ${response}`)
+      }
     }
   } catch (error) {
     logger.error('emailChecker error: ' + error + ' Stack: ' + error.stack)

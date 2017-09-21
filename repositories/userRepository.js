@@ -5,15 +5,12 @@ const logger = require(__base + '\\utils\\logger.js')
 
 const dbConfig = config.get('MySql.dbConfig')
 
+var pool = mysql.createPool(dbConfig)
+
 async function getUserAccount (email) {
   let accountAddress
   try {
-    const conn = await mysql.createConnection(dbConfig)
-
-    const [
-      rows,
-      fields
-    ] = await conn.execute(
+    const [rows, fields] = await pool.execute(
       'SELECT Account FROM dbo.users WHERE UserEmail = ?',
       [email]
     )
@@ -31,16 +28,12 @@ async function getUserAccount (email) {
 
 async function saveAccount (account, email, password) {
   try {
-    const conn = await mysql.createConnection(dbConfig)
     var currendDate = new Date().toISOString()
     var values = [
       [account, email, password, currendDate, currendDate]
     ]
 
-    const [
-      results,
-      err
-    ] = await conn.query(
+    const [results,  err] = await pool.query(
       'INSERT INTO dbo.users(Account, UserEmail, Password, Created, Modified) VALUES ?',
       [values]
     )
@@ -53,9 +46,7 @@ async function saveAccount (account, email, password) {
 
 async function updateAccount (account, email, password) {
   try {
-    const conn = await mysql.createConnection(dbConfig)
-
-    const [results, err] = await conn.query(
+    const [results, err] = await pool.query(
       'UPDATE dbo.users SET Account = ?, Password = ?, Modified = NOW() WHERE UserEmail = ?',
       [account, password, email]
     )
@@ -68,12 +59,10 @@ async function updateAccount (account, email, password) {
 
 async function updateReferral (email, referralEmail) {
   try {
-    const conn = await mysql.createConnection(dbConfig)
-
     const [
       results,
       err
-    ] = await conn.query(
+    ] = await pool.query(
       'UPDATE dbo.users SET ReferralEmail = ?, Modified = NOW() WHERE UserEmail = ?',
       [referralEmail, email]
     )
@@ -86,9 +75,7 @@ async function updateReferral (email, referralEmail) {
 
 async function isReferralSet (userEmail) {
   try {
-    const conn = await mysql.createConnection(dbConfig)
-
-    const [rows, fields] = await conn.execute(
+    const [rows, fields] = await pool.execute(
       'SELECT ReferralEmail FROM dbo.users WHERE UserEmail = ?',
       [userEmail]
     )
@@ -109,9 +96,7 @@ async function isReferralSet (userEmail) {
 
 async function isUserRegistered (referralEmail) {
   try {
-    const conn = await mysql.createConnection(dbConfig)
-
-    const [rows, fields] = await conn.execute(
+    const [rows, fields] = await pool.execute(
       'SELECT UserEmail FROM dbo.users WHERE UserEmail = ?',
       [referralEmail]
     )

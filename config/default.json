@@ -4,6 +4,7 @@
   },
   "MySql": {
     "dbConfig": {
+      "connectionLimit" : 10,
       "host": "localhost", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       "user": "test",            // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       "password": "test",                     // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -24,7 +25,7 @@
       "adminAccount": "0x2"
     }, 
     "Contracts": {
-      "batteryV2": "0x554ab5f5fe7006223c2dd321b420e9a05d48ec93"      
+      "batteryV2": "0xbccc714d56bc0da0fd33d96d2a87b680dd6d0df6"      
     }  
   }
 }
