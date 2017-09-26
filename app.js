@@ -434,6 +434,7 @@ app.post("/claim/:address", function(req, res) {
   var receivedApiKey = req.body.apiKey;
 
   if (receivedApiKey != apiKey) {
+    logger.error("437 not valid " + receivedApiKey);
     res.status(401);
     res.send();
 
@@ -441,14 +442,16 @@ app.post("/claim/:address", function(req, res) {
   }
 
   var account = req.params.address;
+
+  logger.infoClaim(
+    "address: " + account + ", request: " + JSON.stringify(req.body)
+  );
+
   var wearLevel = req.body.wearLevel;
 
-  web3.personal.unlockAccount(account, req.body.password, 2, function(
-    err,
-    result
-  ) {
+  web3.personal.unlockAccount(account, req.body.password, 2, function(err, result) {
     if (err) {
-      logger.error("421" + err);
+      logger.error("421 " + err);
       res.status(400);
       res.send("" + false);
       return;
