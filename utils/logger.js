@@ -4,6 +4,7 @@ var log4js = require('log4js')
 var logger = log4js.getLogger()
 var insureLogger = log4js.getLogger('insureLogger')
 var expressLogger = log4js.getLogger('expressLogger')
+var claimLogger = log4js.getLogger('claimLogger')
 
 log4js.configure({
   appenders: {
