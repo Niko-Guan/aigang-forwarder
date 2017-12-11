@@ -1,7 +1,7 @@
 'use strict'
 const config = require('config')
 const request = require('request-promise-native')
-const logger = require(__base + '\\utils\\logger.js')
+const logger = require(__base + '//utils//logger.js')
 
 async function giveCredit (referralEmail) {
   let requestData = {
