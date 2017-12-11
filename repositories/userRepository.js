@@ -1,9 +1,10 @@
 'use strict'
 const mysql = require('mysql2/promise')
 const config = require('config')
-const logger = require(__base + '\\utils\\logger.js')
+const logger = require(__base + '//utils//logger.js')
 
 const dbConfig = config.get('MySql.dbConfig')
+
 
 var pool = mysql.createPool(dbConfig)
 
@@ -115,8 +116,33 @@ async function isUserRegistered (referralEmail) {
   }
 }
 
+async function getUserEmail(account) {
+  try {
+    const [rows, fields] = await pool.execute(
+      'SELECT UserEmail FROM dbo.users WHERE Account = ?',
+      [account]
+    )
+
+    if (rows[0]) {
+      let userEmail = rows[0].UserEmail
+      if (userEmail) {
+        return userEmail;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Repository Error: ' + error.stack)
+    throw error
+  }
+}
+
+
+
+
 module.exports = {
   getUserAccountAddress: getUserAccount,
+  getUserEmail: getUserEmail,
   isReferralSet: isReferralSet,
   isUserRegistered: isUserRegistered,
   saveAccount: saveAccount,

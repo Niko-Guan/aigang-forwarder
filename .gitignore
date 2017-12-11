@@ -5,3 +5,4 @@ WinstonLog*
 web.config
 production.json
 iisnode.yml
+*.log
