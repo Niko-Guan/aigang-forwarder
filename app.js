@@ -239,7 +239,7 @@ app.post("/insure/:address/", function(req, res) {
     policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region) / 12
   );
 
-  web3.personal.unlockAccount(account, req.body.password, 2, function(
+  web3.personal.unlockAccount(account, req.body.password, 200, function(
     err,
     result
   ) {
