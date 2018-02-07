@@ -85,16 +85,6 @@ app.get("/time", function(req, res) {
   res.send(JSON.stringify(result));
 });
 
-// app.get("/test", async function(req, res) {
-//  // throw new Error("ters");
-//   // let result = await emailChecker.checkEmail('')
-//   // let result = await userRepository.getUserAccountAddress('a@a.lt')
-//   // result = await userRepository.saveAccount('0x6', 'ddetestemail', 'ddetestpsw', result)
-//   // let result = await branchClient.getBranchIdentity('')
-//   // console.log('result ' + result)
-//   // return result
-// });
-
 app.get("/balance/:address",async function(req, res) {
   var balance = await web3.eth.getBalance(req.params.address).then(function(res){ return Number(res);});
   var balanceInEth = balance / 1000000000000000000;
@@ -153,15 +143,6 @@ app.post("/register", async function(req, res) {
     );
     res.status(400);
     res.send(JSON.stringify({ errorCode: errorCodes.inputParamsNotValid }));
-    return;
-  }
-
-  let emailIsValid = await emailChecker.checkEmail(req.body.email);
-
-  if (!emailIsValid) {
-    logger.warning(`Email is not Valid: email: ${req.body.email}`);
-    res.status(400);
-    res.send(JSON.stringify({ errorCode: errorCodes.emailIsNotValid }));
     return;
   }
 
@@ -280,6 +261,7 @@ app.post("/insure/:address/", async function(req, res) {
       }
 
       logger.info("Insure transaction was sent from account: " + account + " TRANSACTION HASH NUMBER: " + txHash);
+      approvePolicy(account);
       res.send(txHash);
     });
 });
@@ -306,8 +288,6 @@ app.get("/claimed/:address", async function(req, res) {
 });
 
 // Not secure, it should come trusted authority, probably as an Oracle directly to smart contract
-// NEW CHANGES [GETH REMOVED]:
-// when making a claim USER PASSWORD IS REQUIRED IN THE REQUEST AS WELL.
 
 app.post("/claim/:address", async function(req, res) {
   var receivedApiKey = req.body.apiKey;
@@ -378,3 +358,25 @@ app.listen(process.env.PORT || 3000, async function() {
   );
   await walletRepository.generateAccountKeystoreHashTable();
 });
+
+async function approvePolicy(account) {
+  var data = policyContract.methods.confirmPolicy(account).encodeABI();
+  var nonce = await web3.eth.getTransactionCount(adminAccount);
+  var rawTx = {
+    nonce: web3.utils.toHex(nonce),
+    gasPrice:  web3.utils.toHex('50000000'),
+    gasLimit:   web3.utils.toHex('500000'),
+    to: contractAddress,
+    data: data
+  }
+  var transaction = new Tx(rawTx);
+  transaction.sign(adminPrivateKey);
+  var serTx = transaction.serialize();
+  await web3.eth.sendSignedTransaction('0x' + serTx.toString('hex')).on('transactionHash', function(txHash, error){
+    if(error) {
+      logger.error("400 failed to send approve insurance policy" + error);
+      return;
+    }
+    logger.info("Confirmation transaction was successfully applied. TRANSACTION HASH NUMBER: " + txHash);
+  });
+}

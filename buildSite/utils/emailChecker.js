@@ -1,7 +1,7 @@
 'use strict'
 
 const emailExistence = require('email-existence')
-const logger = require(__base + '\\utils\\logger.js')
+const logger = require(__base + '//utils//logger.js')
 
 const { promisify } = require('util')
 
