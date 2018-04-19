@@ -1,31 +1,35 @@
 {
   "App": {
-    "apiKey": "test"
+    "apiKey": "" // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   },
   "MySql": {
     "dbConfig": {
-      "connectionLimit" : 10,
-      "host": "localhost", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      "user": "test",            // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      "password": "test",                     // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "connectionLimit": 10,
+      "host": "", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "user": "", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "password": "", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       "database": "dbo",
       "port": 3306,
       "ssl": true
     }
   },
   "Branch": {
-    "uri": "https://api.branch.io/v1/",
-    "branchKey": "test",      // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    "branchSecret": "test"    // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    "uri": "",
+    "branchKey": "", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    "branchSecret": "" // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   },
   "Web3": {
     "Provider": {
-      "uri" : "http://localhost:8545",    // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      "adminPass": "test",        // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      "adminAccount": "0x2"
-    }, 
+      "uri": "", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "adminPass": "", // TODO Remove!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      "adminAccount": "",
+      "adminPrivateKey": ""
+    },
     "Contracts": {
-      "batteryV2": "0xbccc714d56bc0da0fd33d96d2a87b680dd6d0df6"      
-    }  
+      "batteryV2": ""
+    }
+  },
+  "Files": {
+    "pathToKeystoreFiles": ""
   }
 }
