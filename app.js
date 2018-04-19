@@ -10,9 +10,15 @@ const logger = require("./utils/logger.js");
 const errorCodes = require("./utils/errorCodes.js");
 const emailChecker = require("./utils/emailChecker.js");
 const userRepository = require("./repositories/userRepository.js");
+const walletRepository = require("./repositories/walletRepository.js");
 const branchClient = require("./clients/branchClient.js");
 const config = require("config");
 const helmet = require("helmet");
+var Tx = require('ethereumjs-tx');
+var Wallet = require('ethereumjs-wallet');
+var fullpath = __dirname + "/../keystore files/";
+
+
 
 process.on("uncaughtException", function(err) {
   console.error(
@@ -46,6 +52,10 @@ app.use(function(req, res, next) {
 const web3 = new Web3(
   new Web3.providers.HttpProvider(config.get("Web3.Provider.uri"))
 );
+var gasPrice = '5';
+const GAS_PRICE = web3.utils.toWei(gasPrice, 'gwei');
+const GAS_LIMIT = '6700000';
+
 
 var obj = JSON.parse(
   fs.readFileSync("./build/contracts/BatteryInsurancePolicy.json", "utf8")
@@ -53,10 +63,11 @@ var obj = JSON.parse(
 var abiArray = obj.abi;
 
 var contractAddress = config.get("Web3.Contracts.batteryV2");
-var policyContract = web3.eth.contract(abiArray).at(contractAddress);
+var policyContract = new web3.eth.Contract(abiArray, contractAddress);
 
 var adminAccount = config.get("Web3.Provider.adminAccount");
 var adminPass = config.get("Web3.Provider.adminPass");
+var adminPrivateKey = Buffer.from(config.get("Web3.Provider.adminPrivateKey"), 'hex');
 var apiKey = config.get("App.apiKey");
 
 app.get("/favicon.ico", function(req, res) {
@@ -74,23 +85,13 @@ app.get("/time", function(req, res) {
   res.send(JSON.stringify(result));
 });
 
-// app.get("/test", async function(req, res) {
-//  // throw new Error("ters");
-//   // let result = await emailChecker.checkEmail('')
-//   // let result = await userRepository.getUserAccountAddress('a@a.lt')
-//   // result = await userRepository.saveAccount('0x6', 'ddetestemail', 'ddetestpsw', result)
-//   // let result = await branchClient.getBranchIdentity('')
-//   // console.log('result ' + result)
-//   // return result
-// });
-
-app.get("/balance/:address", function(req, res) {
-  var balance = web3.eth.getBalance(req.params.address).toNumber();
+app.get("/balance/:address",async function(req, res) {
+  var balance = await web3.eth.getBalance(req.params.address).then(function(res){ return Number(res);});
   var balanceInEth = balance / 1000000000000000000;
   res.send("" + balanceInEth);
 });
 
-app.post("/sendTestnetEthers/:address", function(req, res) {
+app.post("/sendTestnetEthers/:address", async function(req, res) {
   var account = req.params.address;
   var receivedApiKey = req.body.apiKey;
 
@@ -101,39 +102,34 @@ app.post("/sendTestnetEthers/:address", function(req, res) {
     return;
   }
 
-  web3.personal.unlockAccount(account, req.body.password, 4, function(
-    err,
-    accResult
-  ) {
-    if (accResult) {
-      // unlocking admin account for ethers sending
-      web3.personal.unlockAccount(adminAccount, adminPass, 4, function(
-        err,
-        adminAccResult
-      ) {
-        web3.eth.sendTransaction(
-          {
-            value: 50000000000000000,
-            gas: 2000000,
-            from: adminAccount,
-            to: account
-          },
-          function(err, result) {
-            if (err) {
-              logger.error("87 " + err);
-              res.send(false);
-            } else {
-              var txId = result;
-              res.send("" + txId);
-            }
-          }
-        );
-      });
-    } else {
-      logger.error("107 " + err);
+  var nonce = await web3.eth.getTransactionCount(adminAccount)
+  var rawTx = {
+      from: adminAccount,
+      nonce: web3.utils.toHex(nonce),
+      gasPrice:  web3.utils.toHex(GAS_PRICE),
+      gasLimit:   web3.utils.toHex(21000),
+      to: account,
+      value: 50000000000000000
+    }
+    var tx = new Tx(rawTx);
+    tx.sign(adminPrivateKey);
+    var serializedTx = tx.serialize();
+    try {
+      web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+              .on('transactionHash', function(hash, err) {
+                if(err) {
+                  logger.error("Failed to send transaction: " + err)
+                }
+                if(hash) {
+                  logger.info("Transaction sent to: " + account +" TxHas: " + hash);
+                }
+              });
+    }
+    catch(e) {
+      logger.error("107 "+ e);
       res.send(false);
     }
-  });
+    res.send(true);
 });
 
 // referralEmail - user email who invited
@@ -150,15 +146,6 @@ app.post("/register", async function(req, res) {
     return;
   }
 
-  let emailIsValid = await emailChecker.checkEmail(req.body.email);
-
-  if (!emailIsValid) {
-    logger.warning(`Email is not Valid: email: ${req.body.email}`);
-    res.status(400);
-    res.send(JSON.stringify({ errorCode: errorCodes.emailIsNotValid }));
-    return;
-  }
-
   let email = req.body.email.toLowerCase();
 
   try {
@@ -166,17 +153,17 @@ app.post("/register", async function(req, res) {
 
     if (account) {
       if (account === "empty") {
-        account = await web3.personal.newAccount(req.body.password);
+        account = walletRepository.getNewAccount(email, req.body.password);
         await userRepository.updateAccount(account, email, req.body.password);
-        res.send(account);
+        res.send(account)
       } else {
-        res.send(account);
+        res.send(account)
       }
     } else {
-      account = await web3.personal.newAccount(req.body.password);
+      account = walletRepository.getNewAccount(email, req.body.password);
       await userRepository.saveAccount(account, email, req.body.password);
 
-      res.send(account);
+      res.send(account)
     }
   } catch (error) {
     logger.error("156 " + error);
@@ -190,30 +177,29 @@ app.post("/checkReferral", async function(req, res) {
   res.send("OK");
 });
 
-app.post("/insurancePrice/:address", function(req, res) {
+app.post("/insurancePrice/:address", async function(req, res) {
   var deviceBrand = req.body.deviceBrand;
   var deviceYear = req.body.deviceYear;
   var wearLevel = req.body.wearLevel;
   var region = req.body.region;
-
-  var result = policyContract.policyPrice(
+  var result = await policyContract.methods.policyPrice(
     deviceBrand,
     deviceYear,
     wearLevel,
     region
-  );
+  ).call();
   var priceInEth = result / 1000000000000000000;
-  res.send("" + priceInEth);
+  res.send(""+priceInEth);
 });
 
-app.get("/maxPayout", function(req, res) {
+app.get("/maxPayout", async function(req, res) {
   var account = req.params.address;
-  var result = policyContract.maxPayout.call();
+  var result = await policyContract.methods.maxPayout().call();
   var payoutInEth = result / 1000000000000000000;
   res.send("" + payoutInEth);
 });
 
-app.post("/insure/:address/", function(req, res) {
+app.post("/insure/:address/", async function(req, res) {
   var receivedApiKey = req.body.apiKey;
 
   if (receivedApiKey !== apiKey) {
@@ -230,132 +216,80 @@ app.post("/insure/:address/", function(req, res) {
     "address: " + account + ", request: " + JSON.stringify(req.body)
   );
 
-  var itemId = req.body.itemId;
-  var deviceBrand = req.body.deviceBrand;
-  var deviceYear = req.body.deviceYear;
-  var wearLevel = req.body.wearLevel;
-  var region = req.body.region;
-  var policyMonthlyPayment = Math.round(
-    policyContract.policyPrice(deviceBrand, deviceYear, wearLevel, region) / 12
-  );
+    var itemId = req.body.itemId;
+    var deviceBrand = req.body.deviceBrand;
+    var deviceYear = req.body.deviceYear;
+    var wearLevel = req.body.wearLevel;
+    var region = req.body.region;
+    var userAccountPassword = req.body.password;
+    var policyMonthlyPayment = Math.round(
+      await policyContract.methods.policyPrice(deviceBrand, deviceYear, wearLevel, region).call() / 12
+    );
 
-  web3.personal.unlockAccount(account, req.body.password, 20, function(
-    err,
-    result
-  ) {
-    if (err) {
-      logger.error("323 " + err);
+    var email = await userRepository.getUserEmail(account);
+
+    var accountKeystoreInfo = await walletRepository.getKeystoreFile(account);
+
+    if (!accountKeystoreInfo) {
+      logger.error("250 No keystore file was found of account: " + account);
       res.status(400);
-      res.send("1" + err);
+      res.send("250 Can not find account: " + account);
       return;
     }
 
-    if (result) {
-      policyContract.insure(itemId, deviceBrand, deviceYear, wearLevel, region,
-        {
-          value: policyMonthlyPayment,
-          gas: 300000,
-          gasPrice: 30000000000,
-          from: account
-        },
-        function(err, result) {
-          if (err) {
-            logger.error("294 " + err);
-            res.status(400);
-            res.send("1" + err);
-            return;
-          } else {
-            var txIdinsure = result;
-            res.send(txIdinsure);
-
-            let filter = web3.eth.filter("latest");
-            filter.watch(function(error, result) {
-              if (error) {
-                logger.error("316 error in filter watch " + error);
-                res.status(400);
-                res.send("1" + error);
-                return;
-              }
-
-              let confirmedBlock = web3.eth.getBlock(web3.eth.blockNumber - 3);
-              if (confirmedBlock.transactions.length > 0) {
-                let transaction = web3.eth.getTransaction(txIdinsure);
-
-                if (transaction && transaction.from === account) {
-                  // ---- confirmation transaction is needed from OWNER , TODO: refactor it and move to other file
-
-                  web3.personal.unlockAccount(
-                    adminAccount,
-                    adminPass,
-                    2,
-                    function(err, result) {
-                      if (result) {
-                        policyContract.confirmPolicy(
-                          account,
-                          {
-                            gas: 200000,
-                            gasPrice: 15000000000,
-                            from: adminAccount
-                          },
-                          function(err, result) {
-                            if (err) {
-                              logger.error("328 " + err);
-                              // res.status(400);
-                              // res.send('2' + err);
-                            } else {
-                              // res.send(txIdinsure);
-                              logger.info("success confirmation");
-                            }
-                          }
-                        );
-                      } else {
-                        logger.error("338 " + err);
-                      }
-                    }
-                  );
-
-                } else {
-                  logger.warning("353 return 400: transaction.from != account");
-                  res.status(400);
-                  res.send("4" + "ransaction.from != account");
-                }
-                filter.stopWatching();
-              }
-            });
-          }
-        }
-      );
-    } else {
-      logger.warning("364 return 400 result: " + result);
-      res.status(400);
-      res.send("5" + result);
+    var nonce = await web3.eth.getTransactionCount(account);
+    var encodedData = policyContract.methods.insure(itemId, deviceBrand, deviceYear, wearLevel, region).encodeABI();
+    var userWallet = Wallet.fromV3(accountKeystoreInfo, userAccountPassword);
+   
+    var rawTx = {
+        nonce: web3.utils.toHex(nonce),
+        gasPrice:  web3.utils.toHex('50000000'),
+        gasLimit:   web3.utils.toHex('500000'),
+        to: contractAddress,
+        data: encodedData,
+        value: policyMonthlyPayment
     }
-  });
+    var tx = new Tx(rawTx);
+    tx.sign(userWallet.getPrivateKey());
+    var serializedTx = tx.serialize();
+    await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex')).on('transactionHash', function(txHash, error){
+      if(error) {
+        logger.error("276 failed to send transaction to insure contract" + error);
+        res.status(400);
+        res.send("1" + err);
+        return;
+      }
+
+      logger.info("Insure transaction was sent from account: " + account + " TRANSACTION HASH NUMBER: " + txHash);
+      approvePolicy(account);
+      res.send(txHash);
+    });
 });
 
-app.get("/policyEndDate/:address", function(req, res) {
+app.get("/policyEndDate/:address", async function(req, res) {
   var account = req.params.address;
 
-  var result = policyContract.getPolicyEndDateTimestamp({ from: account });
+  var result = await policyContract.methods.getPolicyEndDateTimestamp().call({from: account});
   res.send("" + result);
 });
 
-app.get("/nextPayment/:address", function(req, res) {
+app.get("/nextPayment/:address", async function(req, res) {
   var account = req.params.address;
 
-  var result = policyContract.getPolicyNextPayment({ from: account });
+  var result = await policyContract.methods.getPolicyNextPayment().call({ from: account });
   res.send("" + result);
 });
 
-app.get("/claimed/:address", function(req, res) {
+app.get("/claimed/:address", async function(req, res) {
   var account = req.params.address;
 
-  var result = policyContract.claimed({ from: account });
+  var result = await policyContract.methods.claimed().call({ from: account });
   res.send("" + result);
 });
 
 // Not secure, it should come trusted authority, probably as an Oracle directly to smart contract
-app.post("/claim/:address", function(req, res) {
+
+app.post("/claim/:address", async function(req, res) {
   var receivedApiKey = req.body.apiKey;
 
   if (receivedApiKey != apiKey) {
@@ -373,36 +307,43 @@ app.post("/claim/:address", function(req, res) {
   );
 
   var wearLevel = req.body.wearLevel;
+  var userAccountPassword = req.body.password;
+  var email = await userRepository.getUserEmail(account);
+  
+  var accountKeystoreInfo = await walletRepository.getKeystoreFile(account);
 
-  web3.personal.unlockAccount(account, req.body.password, 2, function(err, result) {
-    if (err) {
-      logger.error("421 " + err);
+  if (!accountKeystoreInfo) {
+    logger.error("331 No keystore file was found of account: " + account);
+    res.status(400);
+    res.send("331 Can not find account: " + account);
+    return;
+  }
+  
+  var nonce = await web3.eth.getTransactionCount(account);
+  var encodedData = policyContract.methods.claim(wearLevel).encodeABI();
+  var userWallet = Wallet.fromV3(accountKeystoreInfo, userAccountPassword);
+
+  var rawTx = {
+    nonce: web3.utils.toHex(nonce),
+    gasPrice:  web3.utils.toHex('5000000000'),
+    gasLimit:   web3.utils.toHex('500000'),
+    to: contractAddress,
+    data: encodedData
+  }
+  var tx = new Tx(rawTx);
+  tx.sign(userWallet.getPrivateKey());
+  var serializedTx = tx.serialize();
+  
+  await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex')).on('transactionHash', function(txHash, error){
+    if(error) {
+      logger.error("355 failed to send transaction to insure contract" + error);
       res.status(400);
-      res.send("" + false);
+      res.send("355 " + err);
       return;
     }
-
-    if (result) {
-      policyContract.claim(wearLevel, { gas: 400000, from: account }, function(
-        err,
-        result
-      ) {
-        if (err) {
-          logger.error("407" + err);
-          res.status(400);
-          res.send("" + false);
-          return;
-        } else {
-          var txId = result;
-          res.send(txId);
-          return;
-        }
-      });
-    } else {
-      logger.error("444 result is undefined " + result);
-      res.status(400);
-      res.send("" + false);
-    }
+    logger.info("Claim transaction was sent from account: " + account + " TRANSACTION HASH NUMBER: " + txHash);
+    res.send(txHash);
+    return;
   });
 });
 
@@ -410,9 +351,32 @@ app.get("/", function(req, res) {
   res.send("Welcome to API. Specs can be found: ");
 });
 
-app.listen(process.env.PORT || 3000, function() {
+app.listen(process.env.PORT || 3000, async function() {
   logger.info(
     "Example app listening on port 3000 and https or process.env.PORT: " +
       process.env.PORT
   );
+  await walletRepository.generateAccountKeystoreHashTable();
 });
+
+async function approvePolicy(account) {
+  var data = policyContract.methods.confirmPolicy(account).encodeABI();
+  var nonce = await web3.eth.getTransactionCount(adminAccount);
+  var rawTx = {
+    nonce: web3.utils.toHex(nonce),
+    gasPrice:  web3.utils.toHex('50000000'),
+    gasLimit:   web3.utils.toHex('500000'),
+    to: contractAddress,
+    data: data
+  }
+  var transaction = new Tx(rawTx);
+  transaction.sign(adminPrivateKey);
+  var serTx = transaction.serialize();
+  await web3.eth.sendSignedTransaction('0x' + serTx.toString('hex')).on('transactionHash', function(txHash, error){
+    if(error) {
+      logger.error("400 failed to send approve insurance policy" + error);
+      return;
+    }
+    logger.info("Confirmation transaction was successfully applied. TRANSACTION HASH NUMBER: " + txHash);
+  });
+}

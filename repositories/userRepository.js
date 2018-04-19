@@ -1,18 +1,18 @@
 'use strict'
 const mysql = require('mysql2/promise')
 const config = require('config')
-const logger = require(__base + '\\utils\\logger.js')
+const logger = require(__base + '/utils/logger.js')
 
 const dbConfig = config.get('MySql.dbConfig')
 
+
 var pool = mysql.createPool(dbConfig)
 
-async function getUserAccount (email) {
+async function getUserAccount(email) {
   let accountAddress
   try {
     const [rows, fields] = await pool.execute(
-      'SELECT Account FROM dbo.users WHERE UserEmail = ?',
-      [email]
+      'SELECT Account FROM dbo.users WHERE UserEmail = ?', [email]
     )
 
     if (rows[0]) {
@@ -26,16 +26,15 @@ async function getUserAccount (email) {
   return accountAddress
 }
 
-async function saveAccount (account, email, password) {
+async function saveAccount(account, email, password) {
   try {
     var currendDate = new Date().toISOString()
     var values = [
       [account, email, password, currendDate, currendDate]
     ]
 
-    const [results,  err] = await pool.query(
-      'INSERT INTO dbo.users(Account, UserEmail, Password, Created, Modified) VALUES ?',
-      [values]
+    const [results, err] = await pool.query(
+      'INSERT INTO dbo.users(Account, UserEmail, Password, Created, Modified) VALUES ?', [values]
     )
     return results
   } catch (error) {
@@ -44,11 +43,10 @@ async function saveAccount (account, email, password) {
   }
 }
 
-async function updateAccount (account, email, password) {
+async function updateAccount(account, email, password) {
   try {
     const [results, err] = await pool.query(
-      'UPDATE dbo.users SET Account = ?, Password = ?, Modified = NOW() WHERE UserEmail = ?',
-      [account, password, email]
+      'UPDATE dbo.users SET Account = ?, Password = ?, Modified = NOW() WHERE UserEmail = ?', [account, password, email]
     )
     return results
   } catch (error) {
@@ -57,14 +55,13 @@ async function updateAccount (account, email, password) {
   }
 }
 
-async function updateReferral (email, referralEmail) {
+async function updateReferral(email, referralEmail) {
   try {
     const [
       results,
       err
     ] = await pool.query(
-      'UPDATE dbo.users SET ReferralEmail = ?, Modified = NOW() WHERE UserEmail = ?',
-      [referralEmail, email]
+      'UPDATE dbo.users SET ReferralEmail = ?, Modified = NOW() WHERE UserEmail = ?', [referralEmail, email]
     )
     return results
   } catch (error) {
@@ -73,11 +70,10 @@ async function updateReferral (email, referralEmail) {
   }
 }
 
-async function isReferralSet (userEmail) {
+async function isReferralSet(userEmail) {
   try {
     const [rows, fields] = await pool.execute(
-      'SELECT ReferralEmail FROM dbo.users WHERE UserEmail = ?',
-      [userEmail]
+      'SELECT ReferralEmail FROM dbo.users WHERE UserEmail = ?', [userEmail]
     )
 
     if (rows[0]) {
@@ -94,11 +90,10 @@ async function isReferralSet (userEmail) {
   }
 }
 
-async function isUserRegistered (referralEmail) {
+async function isUserRegistered(referralEmail) {
   try {
     const [rows, fields] = await pool.execute(
-      'SELECT UserEmail FROM dbo.users WHERE UserEmail = ?',
-      [referralEmail]
+      'SELECT UserEmail FROM dbo.users WHERE UserEmail = ?', [referralEmail]
     )
 
     if (rows[0]) {
@@ -115,8 +110,29 @@ async function isUserRegistered (referralEmail) {
   }
 }
 
+async function getUserEmail(account) {
+  try {
+    const [rows, fields] = await pool.execute(
+      'SELECT UserEmail FROM dbo.users WHERE Account = ?', [account]
+    )
+
+    if (rows[0]) {
+      let userEmail = rows[0].UserEmail
+      if (userEmail) {
+        return userEmail;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Repository Error: ' + error.stack)
+    throw error
+  }
+}
+
 module.exports = {
   getUserAccountAddress: getUserAccount,
+  getUserEmail: getUserEmail,
   isReferralSet: isReferralSet,
   isUserRegistered: isUserRegistered,
   saveAccount: saveAccount,
