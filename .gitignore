@@ -5,3 +5,7 @@ WinstonLog*
 web.config
 production.json
 iisnode.yml
+keystore
+buildSite/config/default.json
+config/default.json
+config/default.json
